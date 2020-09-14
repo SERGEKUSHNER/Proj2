@@ -23,10 +23,10 @@ class PaymentService:
         randNumber = random.randint(1, 101)
         print(randNumber)
         if randNumber > 50:
-            print("Expensive Payment Service is available")
+            print("Payment Service is available")
             return True
         else:
-            print("Expensive Payment Service is not available")
+            print("Payment Service is not available")
             return False
 
 

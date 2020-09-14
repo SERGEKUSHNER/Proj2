@@ -9,7 +9,6 @@ app.config['PROPAGATE_EXCEPTIONS'] = True  # To allow flask propagating exceptio
 
 api = Api(app)
 
-
 items = []
 
 
@@ -77,7 +76,7 @@ class Item(Resource):
     def post(self):
         data = Item.parser.parse_args()
         if next(filter(lambda x: x['creditCardNumber'] == data['creditCardNumber'], items), None) is not None:
-            return {'message': "This creditCardNumber already exists."}
+            return {'message': "This creditCardNumber already exists."}, 500
 
         item = {
             'creditCardNumber': data['creditCardNumber'],
@@ -88,26 +87,37 @@ class Item(Resource):
         }
         items.append(item)
         if data['Amount'] < 21:
-            PaymentService.CheapPaymentGateway()
+            if PaymentService.PaymentAvailability():
+                PaymentService.CheapPaymentGateway()
+                return item, 200
+            else:
+                return {'item': None}, 400
         if data['Amount'] in range(21, 501):
             if PaymentService.PaymentAvailability():
                 PaymentService.ExpensivePaymentGateway()
+                return item, 200
             else:
-                PaymentService.CheapPaymentGateway()
-        if data['Amount'] > 500:
-            for x in range(3):
                 if PaymentService.PaymentAvailability():
-                    PaymentService.PremiumPaymentGateway()
-                    break
+                    PaymentService.CheapPaymentGateway()
+                else:
+                    return {'item': None}, 400
 
-        return item
+        if data['Amount'] > 500:
+            if not PaymentService.PaymentAvailability():
+                for x in range(2):
+                    if PaymentService.PaymentAvailability():
+                        PaymentService.PremiumPaymentGateway()
+                        return item, 200
+                return {'item': None}, 400
+            else:
+                PaymentService.PremiumPaymentGateway()
+                return item, 200
 
     def get(self):
-         return {'items': items}
+        return {'items': items}
 
 
 api.add_resource(Item, '/item/')
-
 
 if __name__ == '__main__':
     app.run(debug=True)  # important to mention debug=True
